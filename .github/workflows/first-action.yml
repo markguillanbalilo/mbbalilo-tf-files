@@ -20,4 +20,4 @@ jobs:
           echo Add other actions to build,
           echo test, and deploy your project.
       - name: Update
-        run: apt-get update -Y
+        run: aws s3 ls
