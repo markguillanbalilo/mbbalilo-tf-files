@@ -33,13 +33,37 @@ jobs:
               region_output="Region: $region"
               vpc_ids=$(echo $sgs | jq -r '.[].VpcId' | sort | uniq)
               for vpc_id in $vpc_ids; do
-                vpc_output="\n=========================================\nVPC ID: $vpc_id\n"
+                vpc_name=$(aws ec2 describe-vpcs --vpc-ids $vpc_id --region $region --query "Vpcs[0].Tags[?Key=='Name'].Value" --output text)
+                [ -z "$vpc_name" ] && vpc_name="N/A"
+                vpc_output="\n==============================\nVPC: $vpc_name | $vpc_id\n"
                 for ((i=0; i<$sg_count; i++)); do
                   sg_vpc_id=$(echo $sgs | jq -r ".[$i].VpcId")
                   if [ "$sg_vpc_id" == "$vpc_id" ]; then
-                    sg_name=$(echo $sgs | jq -r ".[$i].GroupName")
                     sg_id=$(echo $sgs | jq -r ".[$i].GroupId")
-                    vpc_output="$vpc_output-> Security Group ID: $sg_id\n-> Security Group Name: $sg_name\n"
+                    sg_name=$(echo $sgs | jq -r ".[$i].GroupName")
+                    sg_details="Security Group: $sg_name / $sg_id\n"
+                    
+                    inbound_rules=$(echo $sgs | jq -c ".[$i].IpPermissions[] | select(.IpRanges[].CidrIp == \"0.0.0.0/0\")")
+                    for rule in $inbound_rules; do
+                      rule_type="Inbound Rule"
+                      protocol=$(echo $rule | jq -r ".IpProtocol")
+                      from_port=$(echo $rule | jq -r ".FromPort")
+                      to_port=$(echo $rule | jq -r ".ToPort")
+                      description=$(echo $rule | jq -r ".IpRanges[] | select(.CidrIp == \"0.0.0.0/0\").Description // \"N/A\"")
+                      sg_details="$sg_details$rule_type: [$protocol][$from_port-$to_port][0.0.0.0/0][$description]\n"
+                    done
+                    
+                    outbound_rules=$(echo $sgs | jq -c ".[$i].IpPermissionsEgress[] | select(.IpRanges[].CidrIp == \"0.0.0.0/0\")")
+                    for rule in $outbound_rules; do
+                      rule_type="Outbound Rule"
+                      protocol=$(echo $rule | jq -r ".IpProtocol")
+                      from_port=$(echo $rule | jq -r ".FromPort")
+                      to_port=$(echo $rule | jq -r ".ToPort")
+                      description=$(echo $rule | jq -r ".IpRanges[] | select(.CidrIp == \"0.0.0.0/0\").Description // \"N/A\"")
+                      sg_details="$sg_details$rule_type: [$protocol][$from_port-$to_port][0.0.0.0/0][$description]\n"
+                    done
+
+                    vpc_output="$vpc_output$sg_details"
                   fi
                 done
                 region_output="$region_output$vpc_output"
