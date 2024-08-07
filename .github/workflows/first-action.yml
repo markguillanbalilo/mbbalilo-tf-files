@@ -1,7 +1,7 @@
 name: List S3 Buckets
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: #DISABLE THE AUTO DEPLOY
 
 jobs:
   list-s3:
