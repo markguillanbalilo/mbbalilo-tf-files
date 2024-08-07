@@ -1,4 +1,4 @@
-name: List Security Groups with 0.0.0.0/0 and Notify Slack
+name: List Security Groups with 0.0.0.0/0 and Notify Slack #TITLE
 
 on:
   workflow_dispatch:
