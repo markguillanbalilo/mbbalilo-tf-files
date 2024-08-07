@@ -36,6 +36,7 @@ jobs:
                 sg_id=$(echo $sgs | jq -r ".[$i].GroupId")
                 sg_name=$(echo $sgs | jq -r ".[$i].GroupName")
                 region_output="$region_output\n-> VPC ID: $vpc_id\n-> Security Group ID: $sg_id\n-> Security Group Name: $sg_name"
+                echo "========================================================================"
               done
               output="$output\n\n$region_output"
             fi
