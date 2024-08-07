@@ -31,12 +31,18 @@ jobs:
             sg_count=$(echo $sgs | jq '. | length')
             if [ "$sg_count" -gt 0 ]; then
               region_output="Region: $region"
-              for ((i=0; i<$sg_count; i++)); do
-                vpc_id=$(echo $sgs | jq -r ".[$i].VpcId")
-                sg_id=$(echo $sgs | jq -r ".[$i].GroupId")
-                sg_name=$(echo $sgs | jq -r ".[$i].GroupName")
-                region_output="$region_output\n-> VPC ID: $vpc_id\n-> Security Group ID: $sg_id\n-> Security Group Name: $sg_name"
-                echo "========================================================================"
+              vpc_ids=$(echo $sgs | jq -r '.[].VpcId' | sort | uniq)
+              for vpc_id in $vpc_ids; do
+                vpc_output="\n=========================================\nVPC ID: $vpc_id\n"
+                for ((i=0; i<$sg_count; i++)); do
+                  sg_vpc_id=$(echo $sgs | jq -r ".[$i].VpcId")
+                  if [ "$sg_vpc_id" == "$vpc_id" ]; then
+                    sg_id=$(echo $sgs | jq -r ".[$i].GroupId")
+                    sg_name=$(echo $sgs | jq -r ".[$i].GroupName")
+                    vpc_output="$vpc_output-> Security Group ID: $sg_id\n-> Security Group Name: $sg_name\n"
+                  fi
+                done
+                region_output="$region_output$vpc_output"
               done
               output="$output\n\n$region_output"
             fi
