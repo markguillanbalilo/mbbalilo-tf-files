@@ -3,7 +3,7 @@ name: List Security Groups with 0.0.0.0/0 and Notify Slack
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *' # Run daily at 12am UTC
+    - cron: '0 0 * * *' # Run daily at midnight UTC
 
 jobs:
   list_security_groups:
@@ -27,9 +27,17 @@ jobs:
           regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output text)
           for region in $regions; do
             echo "Checking region: $region"
-            sg_output=$(aws ec2 describe-security-groups --region $region --query "SecurityGroups[?IpPermissions[?IpRanges[?CidrIp=='0.0.0.0/0']]]" --output table)
-            if [ -n "$sg_output" ]; then
-              output="$output\n\nRegion: $region\n$sg_output"
+            sgs=$(aws ec2 describe-security-groups --region $region --query "SecurityGroups[?IpPermissions[?IpRanges[?CidrIp=='0.0.0.0/0']]]" --output json)
+            sg_count=$(echo $sgs | jq '. | length')
+            if [ "$sg_count" -gt 0 ]; then
+              region_output="Region: $region"
+              for ((i=0; i<$sg_count; i++)); do
+                vpc_id=$(echo $sgs | jq -r ".[$i].VpcId")
+                sg_id=$(echo $sgs | jq -r ".[$i].GroupId")
+                sg_name=$(echo $sgs | jq -r ".[$i].GroupName")
+                region_output="$region_output\n-> VPC ID: $vpc_id\n-> Security Group ID: $sg_id\n-> Security Group Name: $sg_name"
+              done
+              output="$output\n\n$region_output"
             fi
           done
           echo -e "$output" > security_groups_output.txt
