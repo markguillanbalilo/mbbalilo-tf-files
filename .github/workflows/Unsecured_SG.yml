@@ -37,8 +37,8 @@ jobs:
                 for ((i=0; i<$sg_count; i++)); do
                   sg_vpc_id=$(echo $sgs | jq -r ".[$i].VpcId")
                   if [ "$sg_vpc_id" == "$vpc_id" ]; then
-                    sg_id=$(echo $sgs | jq -r ".[$i].GroupId")
                     sg_name=$(echo $sgs | jq -r ".[$i].GroupName")
+                    sg_id=$(echo $sgs | jq -r ".[$i].GroupId")
                     vpc_output="$vpc_output-> Security Group ID: $sg_id\n-> Security Group Name: $sg_name\n"
                   fi
                 done
