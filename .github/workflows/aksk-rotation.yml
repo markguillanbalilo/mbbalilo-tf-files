@@ -1,0 +1,58 @@
+name: AWS IAM Access Key Management
+
+on:
+  workflow_dispatch:
+
+jobs:
+  manage-iam-keys:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::697520799379:role/github-action-role
+          aws-region: us-east-1
+
+      # - name: Set up AWS CLI
+      #   uses: aws-actions/configure-aws-credentials@v2
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1
+
+      - name: Create new access key for IAM user test
+        id: create-key
+        run: |
+          aws iam create-access-key --user-name test > new_access_key.json
+          echo "Access Key ID: $(jq -r '.AccessKey.AccessKeyId' new_access_key.json)"
+          echo "Secret Access Key: $(jq -r '.AccessKey.SecretAccessKey' new_access_key.json)"
+
+      - name: Send Access Key to Email
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: |
+          echo -e "Subject: New AWS Access Key\n\nAccess Key ID: $(jq -r '.AccessKey.AccessKeyId' new_access_key.json)\nSecret Access Key: $(jq -r '.AccessKey.SecretAccessKey' new_access_key.json)" | \
+          sendmail -S $SMTP_SERVER:$SMTP_PORT -au$EMAIL_USER -ap$EMAIL_PASSWORD recipient@example.com
+
+      - name: Send Access Key to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"New AWS Access Key Created for user Mark:\nAccess Key ID: '$(jq -r '.AccessKey.AccessKeyId' new_access_key.json)'\nSecret Access Key: '$(jq -r '.AccessKey.SecretAccessKey' new_access_key.json)'"}' \
+          $SLACK_WEBHOOK_URL
+
+      - name: Disable old access key
+        run: |
+          OLD_ACCESS_KEY_ID=$(aws iam list-access-keys --user-name Mark | jq -r '.AccessKeyMetadata[] | select(.Status=="Active") | .AccessKeyId' | head -n 1)
+          aws iam update-access-key --user-name Mark --access-key-id $OLD_ACCESS_KEY_ID --status Inactive
+
+      - name: Delete old access key
+        run: |
+          aws iam delete-access-key --user-name Mark --access-key-id $OLD_ACCESS_KEY_ID
