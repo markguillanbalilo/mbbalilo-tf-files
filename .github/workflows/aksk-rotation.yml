@@ -20,12 +20,22 @@ jobs:
         run: |
           sudo apt-get install sendmail -y
 
-      - name: Create new access key for IAM user test
-        id: create-key
-        run: |
-          aws iam create-access-key --user-name test > new_access_key.json
-          echo "Access Key ID: $(jq -r '.AccessKey.AccessKeyId' new_access_key.json)"
-          echo "Secret Access Key: $(jq -r '.AccessKey.SecretAccessKey' new_access_key.json)"
+      # - name: Create new access key for IAM user test
+      #   id: create-key
+      #   run: |
+      #     aws iam create-access-key --user-name test > new_access_key.json
+      #     echo "Access Key ID: $(jq -r '.AccessKey.AccessKeyId' new_access_key.json)"
+      #     echo "Secret Access Key: $(jq -r '.AccessKey.SecretAccessKey' new_access_key.json)"
+
+      # - name: Send Access Key to Email
+      #   env:
+      #     SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+      #     SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      #     EMAIL_USER: ${{ secrets.EMAIL_USER }}
+      #     EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+      #   run: |
+      #     echo -e "Subject: New AWS Access Key\n\nAccess Key ID: $(jq -r '.AccessKey.AccessKeyId' new_access_key.json)\nSecret Access Key: $(jq -r '.AccessKey.SecretAccessKey' new_access_key.json)" | \
+      #     sendmail -S $SMTP_SERVER:$SMTP_PORT -au$EMAIL_USER -ap$EMAIL_PASSWORD mbbalilo@yahoo.com
 
       - name: Send Access Key to Email
         env:
@@ -34,7 +44,7 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         run: |
-          echo -e "Subject: New AWS Access Key\n\nAccess Key ID: $(jq -r '.AccessKey.AccessKeyId' new_access_key.json)\nSecret Access Key: $(jq -r '.AccessKey.SecretAccessKey' new_access_key.json)" | \
+          echo -e "Subject: New AWS Access Key\n\nAccess Key ID" | \
           sendmail -S $SMTP_SERVER:$SMTP_PORT -au$EMAIL_USER -ap$EMAIL_PASSWORD mbbalilo@yahoo.com
 
       - name: Send Access Key to Slack
